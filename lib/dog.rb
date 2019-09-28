@@ -1,3 +1,5 @@
+require "pry"
+
 class Dog 
   attr_accessor :name, :breed, :id
   
@@ -23,13 +25,17 @@ class Dog
   end
   
   def save
-    sql = <<-SQL
-      INSERT INTO dogs (name, breed)
-      VALUES (?, ?)
-    SQL
-    DB[:conn].execute(sql, self.name, self.breed)
+    if self.id
+      self.update
+    else
+      sql = <<-SQL
+        INSERT INTO dogs (name, breed)
+        VALUES (?, ?)
+      SQL
+      DB[:conn].execute(sql, self.name, self.breed)
     
-    @id = DB[:conn].execute("SELECT last_insert_rowid() FROM dogs")[0][0] 
+      @id = DB[:conn].execute("SELECT last_insert_rowid() FROM dogs")[0][0] 
+    end
     self
   end
   
@@ -43,6 +49,37 @@ class Dog
     id = row[0]
     name = row[1]
     breed = row[2]
-    self.new(id, name, breed)
+    self.new(id: id, name: name, breed: breed)
+  end
+  
+  def self.find_by_id(id)
+    sql = <<-SQL
+      SELECT *
+      FROM dogs
+      WHERE id = ?
+      LIMIT 1
+    SQL
+
+    DB[:conn].execute(sql,id).map do |row|
+      self.new_from_db(row)
+    end.first
+  end
+  
+  def self.find_or_create_by(name:, breed:)
+    sql = <<-SQL
+      SELECT * 
+      FROM dogs
+      WHERE name = ?, breed = ?
+      LIMIT 1
+    SQL
+    
+    dog_row = DB[:conn].execute(sql, name, breed)
+    
+    if !dog.empty?
+      dog_data = dog[0]
+      dog = Dog.new(id: dog_data[0], name: dog_data[1], breed: dog_data[2])
+    else
+      dog = self.create(name: name, breed: breed)
+    end
   end
 end
