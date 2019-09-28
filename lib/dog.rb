@@ -93,6 +93,8 @@ class Dog
       LIMIT 1
     SQL
     
-    new_dog = DB[:conn].execute(sql,name)[0]
+    row = DB[:conn].execute(sql,name)[0]
+    
+    self.new_from_db(row)
   end
 end
